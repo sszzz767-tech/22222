@@ -13,6 +13,56 @@ async function isImageAccessible(url) {
   }
 }
 
+// 辅助函数：智能格式化价格显示
+function formatPriceSmart(value) {
+  if (!value) return "0.00";
+  
+  // 如果是字符串，直接使用
+  if (typeof value === 'string') {
+    // 检查字符串中的小数位数
+    const decimalIndex = value.indexOf('.');
+    if (decimalIndex === -1) {
+      return value + ".00"; // 没有小数部分，添加两位小数
+    }
+    
+    const decimalPart = value.substring(decimalIndex + 1);
+    const decimalLength = decimalPart.length;
+    
+    if (decimalLength === 0) {
+      return value + "00"; // 只有小数点，添加两位小数
+    } else if (decimalLength === 1) {
+      return value + "0"; // 只有一位小数，补零
+    } else if (decimalLength > 5) {
+      // 超过5位小数，截断到5位
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num.toFixed(5);
+    }
+    
+    return value; // 2-5位小数，直接返回
+  }
+  
+  // 如果是数字，转换为字符串处理
+  const strValue = value.toString();
+  const decimalIndex = strValue.indexOf('.');
+  
+  if (decimalIndex === -1) {
+    return strValue + ".00"; // 没有小数部分，添加两位小数
+  }
+  
+  const decimalPart = strValue.substring(decimalIndex + 1);
+  const decimalLength = decimalPart.length;
+  
+  if (decimalLength === 0) {
+    return strValue + "00"; // 只有小数点，添加两位小数
+  } else if (decimalLength === 1) {
+    return strValue + "0"; // 只有一位小数，补零
+  } else if (decimalLength > 5) {
+    return value.toFixed(5); // 超过5位小数，截断到5位
+  }
+  
+  return strValue; // 2-5位小数，直接返回
+}
+
 export async function GET(request) {
   try {
     console.log("收到图片生成请求");
@@ -24,8 +74,8 @@ export async function GET(request) {
     const status = searchParams.get("status") || "ENTRY";
     const symbol = searchParams.get("symbol") || "ETHUSDT.P";
     const direction = searchParams.get("direction") || "买";
-    const price = searchParams.get("price") || "4320.00"; // 这应该是触发价格
-    const entry = searchParams.get("entry") || "4387.38"; // 这是开仓价格
+    const price = formatPriceSmart(searchParams.get("price") || "4320.00"); // 智能格式化价格
+    const entry = formatPriceSmart(searchParams.get("entry") || "4387.38"); // 智能格式化价格
     const profit = searchParams.get("profit") || "115.18";
     const time = searchParams.get("time") || new Date().toLocaleString('zh-CN');
 
@@ -61,7 +111,7 @@ export async function GET(request) {
     
     if (!isAccessible) {
       console.error("Cloudinary 图片无法访问，使用备用方案");
-      backgroundImageUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5eYXRHcmFkaWVudCBpZD0iGdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzBhMWUxNztzdG9wLW9wYWNpdHk6MSIg/2Q==";
+      backgroundImageUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMGExZTE3O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiIC8+Cjwvc3ZnPg==";
     }
 
     console.log("开始生成图片响应");
