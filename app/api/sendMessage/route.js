@@ -34,9 +34,9 @@ function toLines(s) {
 }
 
 function getNum(text, key) {
-  const re = new RegExp(`${key}\\s*[:：]\\s*([0-9]+(?:\\.[0-9]+)?)`);
+  const re = new RegExp(`${key}\\s*[:：]\\s*([0-9]+(?:\\.[0-9]{1,5})?)`);
   const m = String(text).match(re);
-  return m ? Number(m[1]) : null;
+  return m ? parseFloat(Number(m[1]).toFixed(5)) : null; // 修改这里，保留5位小数
 }
 
 function getStr(text, key) {
@@ -203,8 +203,8 @@ function generateImageURL(params) {
     status: status || "",
     symbol: cleanSymbol,
     direction: cleanDirection,
-    price: price || "",
-    entry: entry || "",
+    price: price ? parseFloat(price).toFixed(5) : "", // 修改这里，保留5位小数
+    entry: entry ? parseFloat(entry).toFixed(5) : "", // 修改这里，保留5位小数
     profit: profit != null ? profit.toFixed(2) : "",
     time: time || new Date().toLocaleString('zh-CN'),
   }).toString();
@@ -306,8 +306,8 @@ function formatForDingTalk(raw) {
       "🎉 TP2 达成 🎉\n\n" +
       `📈 品种: ${symbol || "-"}\n\n` +
       `📊 方向: ${direction || "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice ?? "-"}\n\n` +
-      (triggerPrice ? `🎯 TP2价格: ${triggerPrice}\n\n` : "") +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      (triggerPrice ? `🎯 TP2价格: ${triggerPrice.toFixed(5)}\n\n` : "") + // 修改这里
       `📈 盈利: ${profitPercent != null ? Math.round(profitPercent) : "-"}%\n\n` +
       // 删除了累计盈利的显示
       "✅ 已完全清仓\n\n";
@@ -348,8 +348,8 @@ function formatForDingTalk(raw) {
       "✨ TP1 达成 ✨\n\n" +
       `📈 品种: ${symbol || "-"}\n\n` +
       `📊 方向: ${direction || "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice ?? "-"}\n\n` +
-      (triggerPrice ? `🎯 TP1价格: ${triggerPrice}\n\n` : "") +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      (triggerPrice ? `🎯 TP1价格: ${triggerPrice.toFixed(5)}\n\n` : "") + // 修改这里
       `📈 盈利: ${profitPercent != null ? Math.round(profitPercent) : "-"}%\n\n`;
       // 删除了累计盈利的显示
 
@@ -396,8 +396,8 @@ function formatForDingTalk(raw) {
       "🎯 已到保本位置 🎯\n\n" +
       `📈 品种: ${symbol || "-"}\n\n` +
       `📊 方向: ${direction || "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice ?? "-"}\n\n` +
-      (triggerPrice ? `🎯 触发价格: ${triggerPrice}\n\n` : "") +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      (triggerPrice ? `🎯 触发价格: ${triggerPrice.toFixed(5)}\n\n` : "") + // 修改这里
       (positionInfo.position ? `📊 仓位: ${positionInfo.position}\n\n` : "") +
       (positionInfo.leverage ? `⚖️ 杠杆倍数: ${positionInfo.leverage}\n\n` : "") +
       (actualProfitPercent !== null ? `📈 盈利: ${actualProfitPercent.toFixed(2)}%\n\n` : "") +
@@ -436,7 +436,7 @@ function formatForDingTalk(raw) {
       "🟡 保本止损触发 🟡\n\n" +
       `📈 品种: ${symbol || "-"}\n\n` +
       `📊 方向: ${direction || "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice ?? "-"}\n\n` +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
       "🔄 系统操作: 清仓保护\n\n" +
       "✅ 风险状态: 已完全转移\n\n";
   } else if (isInitialStop(text)) {
@@ -447,8 +447,8 @@ function formatForDingTalk(raw) {
       "🔴 初始止损触发 🔴\n\n" +
       `📈 品种: ${symbol || "-"}\n\n` +
       `📊 方向: ${direction || "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice || "-"}\n\n` +
-      (triggerPrice ? `🎯 触发价格: ${triggerPrice}\n\n` : "") +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      (triggerPrice ? `🎯 触发价格: ${triggerPrice.toFixed(5)}\n\n` : "") + // 修改这里
       "🔄 系统操作: 止损离场\n\n";
   } else if (isEntry(text)) {
     const days = getNum(text, "回测天数");
@@ -463,11 +463,11 @@ function formatForDingTalk(raw) {
       "🟢 【开仓】 🟢\n\n" +
       `📈 品种: ${symbol ?? "-"}\n\n` +
       `📊 方向: ${direction ?? "-"}\n\n` +
-      `💰 开仓价格: ${entryPrice ?? "-"}\n\n` +
-      `🛑 止损价格: ${stopPrice ?? "-"}\n\n` +
-      `🎯 保本位: ${getNum(text, "保本位") ?? "-"}\n\n` +
-      `🎯 TP1: ${getNum(text, "TP1") ?? "-"}\n\n` +
-      `🎯 TP2: ${getNum(text, "TP2") ?? "-"}\n\n` +
+      `💰 开仓价格: ${entryPrice !== null && entryPrice !== undefined ? entryPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      `🛑 止损价格: ${stopPrice !== null && stopPrice !== undefined ? stopPrice.toFixed(5) : "-"}\n\n` + // 修改这里
+      `🎯 保本位: ${getNum(text, "保本位") !== null ? getNum(text, "保本位").toFixed(5) : "-"}\n\n` + // 修改这里
+      `🎯 TP1: ${getNum(text, "TP1") !== null ? getNum(text, "TP1").toFixed(5) : "-"}\n\n` + // 修改这里
+      `🎯 TP2: ${getNum(text, "TP2") !== null ? getNum(text, "TP2").toFixed(5) : "-"}\n\n` + // 修改这里
       `📊 回测天数: ${days ?? "-"}\n\n` +
       `📈 胜率: ${adjustedWin != null ? adjustedWin.toFixed(2) + "%" : "-"}\n\n` +
       `🔄 交易次数: ${trades ?? "-"}\n\n`;
