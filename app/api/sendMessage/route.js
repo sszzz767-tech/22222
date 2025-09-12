@@ -77,7 +77,9 @@ function formatPriceSmart(value) {
     } else if (decimalLength === 1) {
       return value + "0"; // 只有一位小数，补零
     } else if (decimalLength > 5) {
-      return parseFloat(value).toFixed(5); // 超过5位小数，截断到5位
+      // 超过5位小数，截断到5位，但保留原始字符串的精度
+      const integerPart = value.substring(0, decimalIndex);
+      return integerPart + '.' + decimalPart.substring(0, 5);
     }
     
     return value; // 2-5位小数，直接返回
