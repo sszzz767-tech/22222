@@ -8,7 +8,7 @@ const DINGTALK_WEBHOOK =
 const RELAY_SERVICE_URL = process.env.RELAY_SERVICE_URL || "https://send-todingtalk-pnvjfgztkw.cn-hangzhou.fcapp.run";
 
 // 腾讯云函数地址 - 用于KOOK消息发送
-const TENCENT_CLOUD_KOOK_URL = process.env.TENCENT_CLOUD_KOOK_URL || "https://1323960433-kjulhaaa3h.ap-guangzhou.tencentscf.com";
+const TENCENT_CLOUD_KOOK_URL = process.env.TENCENT_CLOUD_KOOK_URL || "https://1323960433-epanz6yymx.ap-guangzhou.tencentscf.com";
 
 // Discord Webhook URL
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
