@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const DINGTALK_WEBHOOK =
   process.env.DINGTALK_WEBHOOK ||
-  "https://oapi.dingtalk.com/robot/send?access_token=ccd11d67fb1676958ad1d42fcd1b97f9eba5c04882cd96af7fd255805c3587a1";
+  "https://oapi.dingtalk.com/robot/send?access_token=a117def1fa7a3531c5d4e2c008842a571256cfec79cde5d5afbc2e20b668f344";
 
 // 中继服务地址 - 替换成你的函数计算地址！
 const RELAY_SERVICE_URL = process.env.RELAY_SERVICE_URL || "https://send-todingtalk-pnvjfgztkw.cn-hangzhou.fcapp.run";
@@ -261,6 +261,22 @@ function extractPositionInfo(text) {
   };
 }
 
+// 统一的图片价格获取函数 - 新增
+function getImagePrice(rawData, entryPrice) {
+  const latestPrice = getLatestPrice(rawData);
+  
+  let triggerPrice = null;
+  if (isTP1(rawData)) {
+    triggerPrice = getNum(rawData, "TP1价格") || getNum(rawData, "TP1");
+  } else if (isTP2(rawData)) {
+    triggerPrice = getNum(rawData, "TP2价格") || getNum(rawData, "TP2");
+  } else if (isBreakeven(rawData)) {
+    triggerPrice = getNum(rawData, "触发价格") || getNum(rawData, "保本位");
+  }
+  
+  return latestPrice || triggerPrice || entryPrice;
+}
+
 // 生成图片URL的函数 - 修复Discord缓存问题
 function generateImageURL(params) {
   const { status, symbol, direction, price, entry, profit, time, BASE } = params;
@@ -447,33 +463,21 @@ async function sendToDiscord(messageData, rawData, messageType, imageUrl = null)
         }
       ]
     };
-    
-// 强制为Discord重新生成图片URL，确保使用正确的参数
-if (imageUrl) {
-  console.log("=== 强制重新生成Discord图片URL ===");
-  
-  // 从原始数据中提取正确的参数
-  const symbol = getSymbol(rawData);
-  const direction = getDirection(rawData);
-  const entryPrice = getNum(rawData, "开仓价格");
-  
-  // 根据消息类型提取正确的价格 - 修复这里！
-  let correctPrice = null;
-  if (isTP2(rawData)) {
-    correctPrice = getNum(rawData, "TP2价格") || getNum(rawData, "TP2") || getNum(rawData, "平仓价格");
-  } else if (isTP1(rawData)) {
-    correctPrice = getNum(rawData, "TP1价格") || getNum(rawData, "TP1") || getNum(rawData, "平仓价格");
-  } else if (isBreakeven(rawData)) {
-    correctPrice = getNum(rawData, "触发价格") || getNum(rawData, "保本位"); // 修复：使用"触发价格"
-  }
-  
-  // 如果还是为空，使用最新价格
-  if (correctPrice === null) {
-    correctPrice = getLatestPrice(rawData);
-  }
-  
-  const profitPercent = extractProfitPctFromText(rawData) ||
-    (entryPrice && correctPrice ? calcAbsProfitPct(entryPrice, correctPrice) : null);
+
+    // 强制为Discord重新生成图片URL，确保使用正确的参数
+    if (imageUrl) {
+      console.log("=== 强制重新生成Discord图片URL ===");
+      
+      // 从原始数据中提取正确的参数
+      const symbol = getSymbol(rawData);
+      const direction = getDirection(rawData);
+      const entryPrice = getNum(rawData, "开仓价格");
+      
+      // 修复：使用统一的图片价格获取函数，确保与KOOK一致
+      const correctPrice = getImagePrice(rawData, entryPrice);
+
+      const profitPercent = extractProfitPctFromText(rawData) ||
+        (entryPrice && correctPrice ? calcAbsProfitPct(entryPrice, correctPrice) : null);
 
       const pad = (n) => (n < 10 ? "0" + n : "" + n);
       const now = new Date();
@@ -501,7 +505,7 @@ if (imageUrl) {
         status,
         symbol,
         direction,
-        price: correctPrice,
+        price: correctPrice, // 使用统一的价格
         entry: entryPrice,
         profit: profitPercent,
         time: ts,
@@ -641,8 +645,8 @@ function formatForDingTalk(raw) {
 
     // 在TP2消息中附加图片 - 修复价格参数
     try {
-      // 使用最新价格而不是触发价格
-      const latestPrice = getLatestPrice(text) || triggerPrice;
+      // 修复：使用统一的图片价格获取函数
+      const latestPrice = getImagePrice(text, entryPrice);
       
       const pad = (n) => (n < 10 ? "0" + n : "" + n);
       const now = new Date();
@@ -656,7 +660,7 @@ function formatForDingTalk(raw) {
         status: "TP2",
         symbol,
         direction,
-        price: latestPrice, // 修复：使用最新价格
+        price: latestPrice, // 修复：使用统一的价格
         entry: entryPrice,
         profit: profitPercent,
         time: ts,
@@ -682,8 +686,8 @@ function formatForDingTalk(raw) {
 
     // 在TP1消息中附加图片 - 修复价格参数
     try {
-      // 使用最新价格而不是触发价格
-      const latestPrice = getLatestPrice(text) || triggerPrice;
+      // 修复：使用统一的图片价格获取函数
+      const latestPrice = getImagePrice(text, entryPrice);
       
       const pad = (n) => (n < 10 ? "0" + n : "" + n);
       const now = new Date();
@@ -697,7 +701,7 @@ function formatForDingTalk(raw) {
         status: "TP1",
         symbol,
         direction,
-        price: latestPrice, // 修复：使用最新价格
+        price: latestPrice, // 修复：使用统一的价格
         entry: entryPrice,
         profit: profitPercent,
         time: ts,
@@ -732,8 +736,8 @@ function formatForDingTalk(raw) {
 
     // 为保本位置消息附加图片 - 修复价格参数
     try {
-      // 使用最新价格而不是触发价格
-      const latestPrice = getLatestPrice(text) || triggerPrice;
+      // 修复：使用统一的图片价格获取函数
+      const latestPrice = getImagePrice(text, entryPrice);
       
       const pad = (n) => (n < 10 ? "0" + n : "" + n);
       const now = new Date();
@@ -747,7 +751,7 @@ function formatForDingTalk(raw) {
         status: "BREAKEVEN",
         symbol,
         direction,
-        price: latestPrice, // 修复：使用最新价格
+        price: latestPrice, // 修复：使用统一的价格
         entry: entryPrice,
         profit: actualProfitPercent,
         time: ts,
@@ -872,18 +876,11 @@ export async function POST(req) {
       const direction = getDirection(processedRaw);
       const entryPrice = getNum(processedRaw, "开仓价格");
       
-      // 根据消息类型提取正确的触发价格
-      let triggerPrice = null;
-      if (isTP1(processedRaw)) {
-        triggerPrice = getNum(processedRaw, "TP1价格") || getNum(processedRaw, "TP1");
-      } else if (isTP2(processedRaw)) {
-        triggerPrice = getNum(processedRaw, "TP2价格") || getNum(processedRaw, "TP2");
-      } else if (isBreakeven(processedRaw)) {
-        triggerPrice = getNum(processedRaw, "保本位");
-      }
+      // 修复：使用统一的图片价格获取函数
+      const latestPrice = getImagePrice(processedRaw, entryPrice);
 
       const profitPercent = extractProfitPctFromText(processedRaw) ||
-        (entryPrice && triggerPrice ? calcAbsProfitPct(entryPrice, triggerPrice) : null);
+        (entryPrice && latestPrice ? calcAbsProfitPct(entryPrice, latestPrice) : null);
 
       const pad = (n) => (n < 10 ? "0" + n : "" + n);
       const now = new Date();
@@ -898,13 +895,12 @@ export async function POST(req) {
       if (isTP2(processedRaw)) status = "TP2";
       if (isBreakeven(processedRaw)) status = "BREAKEVEN";
 
-      // 生成图片URL - 修复价格参数
-      const latestPrice = getLatestPrice(processedRaw) || triggerPrice;
+      // 生成图片URL - 使用统一的价格获取函数
       imageUrl = generateImageURL({
         status,
         symbol,
         direction,
-        price: latestPrice, // 修复：使用最新价格
+        price: latestPrice, // 修复：使用统一的价格
         entry: entryPrice,
         profit: profitPercent,
         time: ts,
@@ -932,7 +928,7 @@ export async function POST(req) {
               status: messageType,
               symbol: getSymbol(processedRaw),
               direction: getDirection(processedRaw),
-              price: getNum(processedRaw, "触发价格"),
+              price: getImagePrice(processedRaw, getNum(processedRaw, "开仓价格")), // 使用统一的价格
               entry: getNum(processedRaw, "开仓价格"),
               profit: extractProfitPctFromText(processedRaw),
               time: new Date().toLocaleString('zh-CN')
@@ -990,7 +986,7 @@ export async function POST(req) {
         return await sendToKook(formattedMessage, processedRaw, messageType, imageUrl);
       })(),
 
-      // 发送到Discord（新增功能）
+      // 发送到Discord（修复后的功能）
       (async () => {
         console.log("开始发送到Discord...");
         return await sendToDiscord(formattedMessage, processedRaw, messageType, imageUrl);
@@ -1022,3 +1018,4 @@ export async function POST(req) {
     );
   }
 }
+[file content end]
