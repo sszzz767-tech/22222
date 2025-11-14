@@ -1,5 +1,3 @@
-[file name]: app/api/sendMessage/route.js
-[file content begin]
 import { NextResponse } from "next/server";
 
 const DINGTALK_WEBHOOK =
